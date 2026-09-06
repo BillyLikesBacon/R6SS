@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-05T00:00:00.000Z",
+  "title": "Design System: R6SS — Rainbow Six Squad Stats",
+  "extensions": {
+    "colorMeta": {
+      "void":                    { "role": "neutral",   "displayName": "Void",                  "canonical": "#0b0b0b", "tonalRamp": ["#0b0b0b", "#111111", "#1a1a1a", "#222222", "#2d2d2d", "#404040", "#666666", "#888888"] },
+      "surface-raised":          { "role": "neutral",   "displayName": "Ink",                   "canonical": "#111111", "tonalRamp": ["#0b0b0b", "#111111", "#1a1a1a", "#222222", "#2d2d2d", "#404040", "#666666", "#888888"] },
+      "surface-section-header":  { "role": "neutral",   "displayName": "Section Cap",           "canonical": "#151515", "tonalRamp": ["#0b0b0b", "#111111", "#151515", "#1a1a1a", "#222222", "#333333", "#555555", "#777777"] },
+      "border-default":          { "role": "neutral",   "displayName": "Boundary",              "canonical": "#333333", "tonalRamp": ["#1a1a1a", "#222222", "#2d2d2d", "#333333", "#3f3f3f", "#555555", "#777777", "#999999"] },
+      "text-primary":            { "role": "primary",   "displayName": "Near-White",            "canonical": "#f5f5f5", "tonalRamp": ["#888888", "#aaaaaa", "#c0c0c0", "#d0d0d0", "#dedede", "#ebebeb", "#f0f0f0", "#f5f5f5"] },
+      "text-muted":              { "role": "neutral",   "displayName": "Muted",                 "canonical": "#888888", "tonalRamp": ["#333333", "#444444", "#555555", "#666666", "#777777", "#888888", "#aaaaaa", "#cccccc"] },
+      "win-positive":            { "role": "secondary", "displayName": "Win Green",             "canonical": "#6fcf97", "tonalRamp": ["#0d2018", "#112d1e", "#1a4028", "#235233", "#2d6640", "#4aaa70", "#6fcf97", "#a8e6c0"] },
+      "loss-negative":           { "role": "tertiary",  "displayName": "Loss Red",              "canonical": "#eb5757", "tonalRamp": ["#200d0d", "#2e1111", "#3d1616", "#5a2d2d", "#7a3333", "#b54444", "#eb5757", "#f59090"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display",  "purpose": "App title only. Appears once at page top." },
+      "headline": { "displayName": "Headline", "purpose": "Player name h3 inside section cards." },
+      "title":    { "displayName": "Title",    "purpose": "Run button, section headings, status label, field labels." },
+      "body":     { "displayName": "Body",     "purpose": "Subtitle, disclaimer, general prose." },
+      "label":    { "displayName": "Label",    "purpose": "Frequency player names, percentages, form labels, search names." },
+      "micro":    { "displayName": "Micro",    "purpose": "Kickers (PLAYER), stat titles, match-count metas. Always uppercase + tracked." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "progress-fill", "value": "width 0.25s ease", "purpose": "Progress bar fill width transition — the only animation in the system." }
+    ],
+    "breakpoints": [
+      { "name": "tablet", "value": "700px",  "purpose": "Names row collapses 5→2col; player sections collapse 2→1col; stat cards collapse 3→1col." },
+      { "name": "mobile", "value": "430px",  "purpose": "Names row and player sections collapse to 1col; container side padding reduced." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The sole inverted element — light fill on void. Retreats (darkens) on hover rather than brightening.",
+      "html": "<button class=\"ds-btn-primary\">Run Checker</button>",
+      "css": ".ds-btn-primary { display: inline-block; background: #f5f5f5; color: #0b0b0b; border: 1px solid #f5f5f5; border-radius: 0; padding: 9px 15px; font-weight: 600; font-size: 13px; font-family: \"IBM Plex Mono\", \"Courier New\", monospace; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; } .ds-btn-primary:hover:not(:disabled) { background: #222; color: #f5f5f5; border-color: #444; } .ds-btn-primary:focus-visible { outline: 2px solid #f5f5f5; outline-offset: 2px; } .ds-btn-primary:disabled { background: #222; color: #777; border-color: #444; cursor: not-allowed; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Recessed field — darker than the card surface. Double-stroke focus ring (border + 1px shadow).",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"BillyLikesBacon or stats.cc URL...\">",
+      "css": ".ds-input { width: 100%; background: #111; border: 1px solid #333; border-radius: 0; color: #f5f5f5; padding: 9px 10px; font-size: 13px; font-family: \"IBM Plex Mono\", \"Courier New\", monospace; } .ds-input::placeholder { color: #666; } .ds-input:focus-visible { outline: none; border-color: #f5f5f5; box-shadow: 0 0 0 1px #f5f5f5; }"
+    },
+    {
+      "name": "Field Label",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Label with shell-prompt prefix `> ` injected via ::before in muted grey.",
+      "html": "<label class=\"ds-field-label\">Player Username, URL, or UUID</label>",
+      "css": ".ds-field-label { display: block; font-size: 12px; font-weight: 600; color: #f5f5f5; font-family: \"IBM Plex Mono\", \"Courier New\", monospace; margin-bottom: 6px; } .ds-field-label::before { content: \"> \"; color: #888; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flush-to-page bordered container. Background matches page void — cards do not float.",
+      "html": "<div class=\"ds-card\"><p style=\"color:#888;font-size:12px;margin:0\">Card content</p></div>",
+      "css": ".ds-card { background: #0b0b0b; border: 1px solid #333; border-radius: 0; padding: 18px; margin-bottom: 18px; font-family: \"IBM Plex Mono\", \"Courier New\", monospace; }"
+    },
+    {
+      "name": "Status Label",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature component — shell bracket wrapper `[ status ]` via CSS pseudo-elements. Communicates live job state.",
+      "html": "<span class=\"ds-status\">Loading matches - 23 / 50</span>",
+      "css": ".ds-status { font-weight: 600; font-size: 13px; color: #f5f5f5; font-family: \"IBM Plex Mono\", \"Courier New\", monospace; } .ds-status::before { content: \"[ \"; color: #888; } .ds-status::after { content: \" ]\"; color: #888; }"
+    },
+    {
+      "name": "Win Rate Badge — Positive",
+      "kind": "chip",
+      "refersTo": null,
+      "description": "Rectangular semantic chip. Green when win rate ≥ 50%. The only colored element in the system.",
+      "html": "<span class=\"ds-win-badge ds-win-positive\">63.2% WR</span>",
+      "css": ".ds-win-badge { font-size: 11px; font-weight: 600; white-space: nowrap; padding: 2px 6px; border: 1px solid; font-family: \"IBM Plex Mono\", \"Courier New\", monospace; border-radius: 0; } .ds-win-positive { color: #6fcf97; border-color: #2d5a3d; background: #0d2018; } .ds-win-negative { color: #eb5757; border-color: #5a2d2d; background: #200d0d; } .ds-win-na { color: #888; border-color: #333; background: transparent; }"
+    },
+    {
+      "name": "Player Section Card",
+      "kind": "card",
+      "refersTo": "player-section",
+      "description": "Primary results component. Header cap slightly lighter than body; kicker + name hierarchy inside.",
+      "html": "<div class=\"ds-player-section\"><div class=\"ds-player-section-header\"><span class=\"ds-kicker\">Player</span><h3 class=\"ds-player-name\">BillyLikesBacon</h3></div><div class=\"ds-frequency-list\"><div class=\"ds-frequency-row\"><span class=\"ds-freq-player\">Mr.Muun</span><span class=\"ds-freq-count\">29 / 50 matches</span><strong class=\"ds-freq-pct\">58.0%</strong><span class=\"ds-win-badge ds-win-negative\">25.9% WR</span></div></div></div>",
+      "css": ".ds-player-section { background: #111; border: 1px solid #333; font-family: \"IBM Plex Mono\", \"Courier New\", monospace; } .ds-player-section-header { padding: 12px 14px 10px; border-bottom: 1px solid #333; background: #151515; } .ds-kicker { color: #888; display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; } .ds-player-name { margin: 2px 0 0; font-size: 15px; font-weight: 600; color: #f5f5f5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-frequency-list { padding: 4px 14px 6px; } .ds-frequency-row { display: grid; grid-template-columns: minmax(0,1fr) auto auto auto; align-items: center; gap: 10px; min-height: 39px; border-bottom: 1px solid #252525; } .ds-freq-player { font-size: 12px; font-weight: 600; color: #f5f5f5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-freq-count { color: #888; font-size: 10px; white-space: nowrap; } .ds-freq-pct { min-width: 52px; color: #f5f5f5; font-size: 13px; text-align: right; font-weight: 700; } .ds-win-badge { font-size: 11px; font-weight: 600; white-space: nowrap; padding: 2px 6px; border: 1px solid; border-radius: 0; } .ds-win-negative { color: #eb5757; border-color: #5a2d2d; background: #200d0d; }"
+    },
+    {
+      "name": "Progress Bar",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Per-player scrape progress. Thin 5px track, near-white fill, smooth width transition.",
+      "html": "<div class=\"ds-progress-wrap\"><div class=\"ds-progress-top\"><strong>BillyLikesBacon</strong><span>23 / 50 matches</span></div><div class=\"ds-progress-track\"><div class=\"ds-progress-fill\" style=\"width:46%\"></div></div></div>",
+      "css": ".ds-progress-wrap { padding: 8px 0; font-family: \"IBM Plex Mono\", \"Courier New\", monospace; } .ds-progress-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 5px; } .ds-progress-top strong { font-size: 12px; font-weight: 600; color: #f5f5f5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-progress-top span { color: #888; font-size: 10px; white-space: nowrap; } .ds-progress-track { height: 5px; overflow: hidden; background: #242424; } .ds-progress-fill { height: 100%; background: #f5f5f5; transition: width 0.25s ease; }"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "card",
+      "refersTo": "stat-card",
+      "description": "Summary metric tile. 3-up grid in results. Micro uppercase title + large numerical value.",
+      "html": "<div class=\"ds-stat-card\"><div class=\"ds-stat-title\">Main Player Matches Checked</div><div class=\"ds-stat-value\">50</div></div>",
+      "css": ".ds-stat-card { background: #0b0b0b; border: 1px solid #333; border-radius: 0; padding: 12px 14px; font-family: \"IBM Plex Mono\", \"Courier New\", monospace; } .ds-stat-title { font-size: 10px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em; } .ds-stat-value { font-size: 21px; font-weight: 600; color: #f5f5f5; margin-top: 4px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Signal in the Noise",
+    "overview": "R6SS is a tool that reads like a terminal session and thinks like an analyst. Every pixel earns its place by serving a specific stat, label, or action — nothing decorates for decoration's sake. The background is not dark grey, it is near-void (#0b0b0b), and surfaces lift only enough to be distinguished from it. IBM Plex Mono is the sole typeface: its fixed-width rhythm turns every number and username into data, not content.\n\nThe punctuation system is the personality: `> ` precedes user-controlled fields, `# ` precedes section headings, and `[ status ]` wraps runtime state. These are borrowed directly from shell idiom, making the interface feel like a tool you invoke, not a page you visit.\n\nColor is rationed deliberately. The primary palette is achromatic — void black, near-white text, and a small range of dark greys for surface layering. Color only appears in the results layer, and only to carry semantic meaning: green for positive win rate, red for negative win rate. Nothing else in the UI is colored.",
+    "keyCharacteristics": [
+      "Single typeface, fixed-width, at high density — everything is data",
+      "Near-zero radius everywhere; sharp corners communicate precision",
+      "Achromatic except for semantic win/loss indicators in results",
+      "Terminal punctuation (`> `, `# `, `[ ]`) as the primary personality system",
+      "No shadows, no gradients — depth expressed through surface tone steps only",
+      "Status and progress states are first-class UI, not afterthoughts"
+    ],
+    "rules": [
+      { "name": "The Achromatic Purity Rule",   "body": "Color is banned from the interface layer. It enters only when a result carries a binary positive/negative verdict (win rate badges). Any UI chrome element using a non-neutral color is a violation.", "section": "colors" },
+      { "name": "The Semantic Pair Rule",        "body": "Win green and loss red always appear together as a system. Never use one without the other being possible in context, and never use either color for non-outcome purposes.", "section": "colors" },
+      { "name": "The One Face Rule",             "body": "IBM Plex Mono is the only typeface. No serif fallback before 'Courier New'. No display font stack. Any second font is a violation.", "section": "typography" },
+      { "name": "The Size Floor Rule",           "body": "10px is the absolute minimum. No rendered text goes below it. Text at 10px is always uppercase with 0.08em tracking to maintain legibility.", "section": "typography" },
+      { "name": "The Flatness Rule",             "body": "Cards sit flush against the page background because --panel equals --bg (#0b0b0b). Do not introduce card background values that lift cards off the page surface.", "section": "layout" },
+      { "name": "The No-Shadow Rule",            "body": "No box-shadow outside the focus ring (0 0 0 1px var(--text) on focused inputs, which is a focus indicator, not elevation). Adding shadows to cards or buttons is a violation.", "section": "elevation" },
+      { "name": "The Zero-Radius Rule",          "body": "All new components default to border-radius: 0. The feedback modal's rounding is a legacy exception, not a precedent.", "section": "shapes" },
+      { "name": "The Retreating Hover Rule",     "body": "The primary button darkens on hover rather than brightening. This deliberately avoids any 'excitement' signal and keeps the tool register.", "section": "components" }
+    ],
+    "dos": [
+      "Do use border-radius: 0 on every new interactive element, card, input, and container.",
+      "Do prefix field labels with `> ` (CSS ::before, muted color) and section headings with `# ` (same treatment).",
+      "Do wrap runtime status text in `[ ]` brackets via pseudo-elements.",
+      "Do use #111111 for input backgrounds and interactive containers that should feel recessed relative to cards.",
+      "Do use the micro style (10px, 600, uppercase, 0.08em tracking) for all kicker/descriptor labels.",
+      "Do keep the stat card value at 21px, 600 — it is the largest text on the page and the visual anchor of the results summary.",
+      "Do use IBM Plex Mono at all sizes — never swap to a proportional face.",
+      "Do match --panel to --bg (#0b0b0b) so cards sit flush rather than floating."
+    ],
+    "donts": [
+      "Don't use any color outside the win/loss semantic pair (#6fcf97 / #eb5757) in new UI chrome.",
+      "Don't add box-shadow to cards, buttons, or containers — the feedback modal scrim is the only depth effect permitted.",
+      "Don't introduce a second typeface, even as an accent or display face.",
+      "Don't use border-radius on new components — the feedback modal's 10px radius is a legacy exception, not a pattern to extend.",
+      "Don't brighten buttons on hover — the primary button's hover state darkens intentionally.",
+      "Don't use color to communicate hierarchy or emphasis — use weight and size steps instead.",
+      "Don't go below 10px for any rendered text, and always apply uppercase + 0.08em tracking at that size."
+    ]
+  }
+}

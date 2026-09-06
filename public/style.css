@@ -1,24 +1,116 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
-:root {
-  --bg: #0b0b0b;
-  --panel: #0b0b0b;
-  --input: #111111;
-  --border: #333333;
-  --text: #f5f5f5;
-  --muted: #888888;
-  --accent: #f5f5f5;
-  --success: #f5f5f5;
-  --error: #f5f5f5;
+/* =====================================================
+   DARK THEME (default)
+   ===================================================== */
+:root,
+[data-theme="dark"] {
+  --bg:                    #0b0b0b;
+  --panel:                 #0b0b0b;
+  --input:                 #111111;
+  --surface-cap:           #151515;
+  --surface-dropdown:      #141414;
+  --surface-hover:         #252525;
+  --surface-track:         #242424;
+  --border:                #333333;
+  --border-subtle:         #252525;
+  --border-placeholder:    #222222;
+  --text:                  #f5f5f5;
+  --muted:                 #888888;
+  --placeholder:           #666666;
+  --btn-primary-bg:        #f5f5f5;
+  --btn-primary-text:      #0b0b0b;
+  --btn-primary-border:    #f5f5f5;
+  --btn-hover-bg:          #222222;
+  --btn-hover-text:        #f5f5f5;
+  --btn-hover-border:      #444444;
+  --btn-disabled-bg:       #222222;
+  --btn-disabled-text:     #777777;
+  --btn-disabled-border:   #444444;
+  --selection-bg:          #f5f5f5;
+  --selection-text:        #0b0b0b;
+  --scrollbar-track:       #111111;
+  --scrollbar-thumb:       #333333;
+  --scrollbar-thumb-hover: #555555;
+  --modal-scrim:           rgba(0, 0, 0, 0.75);
+  --modal-bg:              #1b1b1b;
+  --modal-border:          #333333;
+  --win-text:              #6fcf97;
+  --win-border:            #2d5a3d;
+  --win-bg:                #0d2018;
+  --loss-text:             #eb5757;
+  --loss-border:           #5a2d2d;
+  --loss-bg:               #200d0d;
+  --color-scheme:          dark;
+
+  /* toggle button */
+  --toggle-bg:             transparent;
+  --toggle-border:         #444444;
+  --toggle-text:           #888888;
+  --toggle-hover-border:   #888888;
+  --toggle-hover-text:     #f5f5f5;
 }
 
+/* =====================================================
+   LIGHT THEME
+   ===================================================== */
+[data-theme="light"] {
+  --bg:                    #f2f2f2;
+  --panel:                 #f2f2f2;
+  --input:                 #e8e8e8;
+  --surface-cap:           #dcdcdc;
+  --surface-dropdown:      #ebebeb;
+  --surface-hover:         #d8d8d8;
+  --surface-track:         #d6d6d6;
+  --border:                #bbbbbb;
+  --border-subtle:         #d0d0d0;
+  --border-placeholder:    #d0d0d0;
+  --text:                  #0b0b0b;
+  --muted:                 #666666;
+  --placeholder:           #999999;
+  --btn-primary-bg:        #0b0b0b;
+  --btn-primary-text:      #f2f2f2;
+  --btn-primary-border:    #0b0b0b;
+  --btn-hover-bg:          #333333;
+  --btn-hover-text:        #f2f2f2;
+  --btn-hover-border:      #333333;
+  --btn-disabled-bg:       #cccccc;
+  --btn-disabled-text:     #999999;
+  --btn-disabled-border:   #bbbbbb;
+  --selection-bg:          #0b0b0b;
+  --selection-text:        #f2f2f2;
+  --scrollbar-track:       #e8e8e8;
+  --scrollbar-thumb:       #bbbbbb;
+  --scrollbar-thumb-hover: #888888;
+  --modal-scrim:           rgba(0, 0, 0, 0.45);
+  --modal-bg:              #ebebeb;
+  --modal-border:          #bbbbbb;
+  --win-text:              #1a7a42;
+  --win-border:            #4aaa70;
+  --win-bg:                #d4f0e0;
+  --loss-text:             #b52020;
+  --loss-border:           #e06060;
+  --loss-bg:               #fde8e8;
+  --color-scheme:          light;
+
+  /* toggle button */
+  --toggle-bg:             transparent;
+  --toggle-border:         #999999;
+  --toggle-text:           #666666;
+  --toggle-hover-border:   #444444;
+  --toggle-hover-text:     #0b0b0b;
+}
+
+/* =====================================================
+   BASE
+   ===================================================== */
 * {
   box-sizing: border-box;
 }
 
 html {
   background: var(--bg);
-  color-scheme: dark;
+  color-scheme: var(--color-scheme);
 }
 
 body {
@@ -28,30 +120,107 @@ body {
   font-family: "IBM Plex Mono", "Courier New", monospace;
   font-size: 14px;
   line-height: 1.45;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
+/* =====================================================
+   BROWSER SURFACES
+   ===================================================== */
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* =====================================================
+   LAYOUT
+   ===================================================== */
 .container {
   width: min(900px, calc(100% - 32px));
   margin: 0 auto;
   padding: 28px 0 70px;
 }
 
+/* =====================================================
+   HEADER
+   ===================================================== */
 header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 28px;
 }
 
-header h1 {
+.header-text h1 {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
 }
 
-header .subtitle {
+.header-text .subtitle {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 13px;
 }
 
+/* =====================================================
+   THEME TOGGLE
+   ===================================================== */
+#theme-toggle {
+  flex-shrink: 0;
+  appearance: none;
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+  border-radius: 0;
+  color: var(--toggle-text);
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 9px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  margin-top: 1px; /* optical alignment with h1 */
+}
+
+#theme-toggle:hover {
+  border-color: var(--toggle-hover-border);
+  color: var(--toggle-hover-text);
+}
+
+#theme-toggle:focus-visible {
+  outline: 1px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* =====================================================
+   CARDS
+   ===================================================== */
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -61,6 +230,9 @@ header .subtitle {
   box-shadow: none;
 }
 
+/* =====================================================
+   FORM — FIELD LABELS
+   ===================================================== */
 .field-label {
   display: block;
   font-size: 12px;
@@ -74,6 +246,9 @@ header .subtitle {
   color: var(--muted);
 }
 
+/* =====================================================
+   FORM — TEXT INPUTS
+   ===================================================== */
 input[type="text"] {
   width: 100%;
   background: var(--input);
@@ -84,10 +259,11 @@ input[type="text"] {
   font-size: 13px;
   font-family: inherit;
   margin-bottom: 17px;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 input[type="text"]::placeholder {
-  color: #666;
+  color: var(--placeholder);
 }
 
 input[type="text"]:focus-visible {
@@ -96,6 +272,9 @@ input[type="text"]:focus-visible {
   box-shadow: 0 0 0 1px var(--text);
 }
 
+/* =====================================================
+   AUTOCOMPLETE
+   ===================================================== */
 .search-container {
   position: relative;
   width: 100%;
@@ -116,7 +295,7 @@ input[type="text"]:focus-visible {
   left: 0;
   right: 0;
   z-index: 1000;
-  background: #141414;
+  background: var(--surface-dropdown);
   border: 1px solid var(--border);
   border-top: none;
   max-height: 240px;
@@ -147,9 +326,10 @@ input[type="text"]:focus-visible {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid var(--border-placeholder);
   font-size: 12px;
   white-space: nowrap;
+  transition: background 0.1s;
 }
 
 .search-item:last-child {
@@ -158,7 +338,7 @@ input[type="text"]:focus-visible {
 
 .search-item:hover,
 .search-item.highlighted {
-  background: #252525;
+  background: var(--surface-hover);
   color: var(--text);
 }
 
@@ -172,6 +352,9 @@ input[type="text"]:focus-visible {
   font-size: 11px;
 }
 
+/* =====================================================
+   NAMES ROW
+   ===================================================== */
 .names-row {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -184,6 +367,9 @@ input[type="text"]:focus-visible {
   margin-bottom: 0;
 }
 
+/* =====================================================
+   MATCH SLIDER
+   ===================================================== */
 .slider-header {
   display: flex;
   justify-content: space-between;
@@ -214,7 +400,7 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-runnable-track {
   width: 100%;
   height: 4px;
-  background: #333;
+  background: var(--border);
   border: 0;
   border-radius: 0;
 }
@@ -225,7 +411,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   margin-top: -5px;
-  background: #f5f5f5;
+  background: var(--text);
   border: 0;
   border-radius: 0;
   cursor: grab;
@@ -238,14 +424,14 @@ input[type="range"]:active::-webkit-slider-thumb {
 input[type="range"]::-moz-range-track {
   width: 100%;
   height: 4px;
-  background: #333;
+  background: var(--border);
   border: 0;
   border-radius: 0;
 }
 
 input[type="range"]::-moz-range-progress {
   height: 4px;
-  background: #f5f5f5;
+  background: var(--text);
   border: 0;
   border-radius: 0;
 }
@@ -253,7 +439,7 @@ input[type="range"]::-moz-range-progress {
 input[type="range"]::-moz-range-thumb {
   width: 14px;
   height: 14px;
-  background: #f5f5f5;
+  background: var(--text);
   border: 0;
   border-radius: 0;
   cursor: grab;
@@ -264,7 +450,7 @@ input[type="range"]:active::-moz-range-thumb {
 }
 
 input[type="range"]:focus-visible {
-  outline: 1px solid #f5f5f5;
+  outline: 1px solid var(--text);
   outline-offset: 3px;
 }
 
@@ -275,11 +461,14 @@ input[type="range"]:focus-visible {
   font-size: 11px;
 }
 
+/* =====================================================
+   RUN BUTTON
+   ===================================================== */
 .run-button {
   display: inline-block;
-  background: var(--text);
-  color: #0b0b0b;
-  border: 1px solid var(--text);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
   border-radius: 0;
   padding: 9px 15px;
   font-weight: 600;
@@ -287,11 +476,13 @@ input[type="range"]:focus-visible {
   font-family: inherit;
   margin-top: 15px;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
-
 .run-button:hover:not(:disabled) {
-  background: #222;
+  background: var(--btn-hover-bg);
+  color: var(--btn-hover-text);
+  border-color: var(--btn-hover-border);
 }
 
 .run-button:focus-visible {
@@ -300,12 +491,15 @@ input[type="range"]:focus-visible {
 }
 
 .run-button:disabled {
-  background: #222;
-  color: #777;
-  border-color: #444;
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-text);
+  border-color: var(--btn-disabled-border);
   cursor: not-allowed;
 }
 
+/* =====================================================
+   STATUS CARD
+   ===================================================== */
 .status-card .status-top {
   display: flex;
   justify-content: space-between;
@@ -327,6 +521,9 @@ input[type="range"]:focus-visible {
   color: var(--muted);
 }
 
+/* =====================================================
+   SCRAPE PROGRESS
+   ===================================================== */
 .scrape-progress-card {
   padding: 0;
 }
@@ -370,7 +567,7 @@ input[type="range"]:focus-visible {
 .player-progress-track {
   height: 5px;
   overflow: hidden;
-  background: #242424;
+  background: var(--surface-track);
 }
 
 .player-progress-fill {
@@ -379,6 +576,9 @@ input[type="range"]:focus-visible {
   transition: width 0.25s ease;
 }
 
+/* =====================================================
+   EMPTY / ERROR STATES
+   ===================================================== */
 .empty-results {
   text-align: left;
   padding: 18px;
@@ -401,6 +601,16 @@ input[type="range"]:focus-visible {
   font-size: 12px;
 }
 
+.error {
+  display: none;
+  color: var(--loss-text);
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+/* =====================================================
+   RESULTS — STAT CARDS
+   ===================================================== */
 .stat-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -420,6 +630,7 @@ input[type="range"]:focus-visible {
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .stat-card .stat-value {
@@ -428,6 +639,9 @@ input[type="range"]:focus-visible {
   margin-top: 4px;
 }
 
+/* =====================================================
+   RESULTS — SECTION HEADINGS
+   ===================================================== */
 .freq-heading,
 .groups-heading {
   padding: 14px 18px 2px;
@@ -449,6 +663,9 @@ input[type="range"]:focus-visible {
   font-size: 11px;
 }
 
+/* =====================================================
+   RESULTS — FREQ GRID (legacy)
+   ===================================================== */
 .freq-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -480,7 +697,7 @@ input[type="range"]:focus-visible {
 }
 
 .freq-box .freq-pct {
-  color: var(--success);
+  color: var(--text);
   font-weight: 600;
   font-size: 12px;
   white-space: nowrap;
@@ -496,6 +713,9 @@ input[type="range"]:focus-visible {
   font-weight: 400;
 }
 
+/* =====================================================
+   RESULTS — PLAYER SECTIONS
+   ===================================================== */
 .player-sections {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -512,7 +732,7 @@ input[type="range"]:focus-visible {
 .player-section-header {
   padding: 12px 14px 10px;
   border-bottom: 1px solid var(--border);
-  background: #151515;
+  background: var(--surface-cap);
 }
 
 .player-section-kicker {
@@ -532,6 +752,9 @@ input[type="range"]:focus-visible {
   font-size: 15px;
 }
 
+/* =====================================================
+   RESULTS — FREQUENCY ROWS
+   ===================================================== */
 .frequency-list {
   padding: 4px 14px 6px;
 }
@@ -542,7 +765,7 @@ input[type="range"]:focus-visible {
   align-items: center;
   gap: 10px;
   min-height: 39px;
-  border-bottom: 1px solid #252525;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .frequency-row:last-child {
@@ -574,32 +797,39 @@ input[type="range"]:focus-visible {
   opacity: 0.45;
 }
 
+/* =====================================================
+   WIN RATE BADGES
+   ===================================================== */
 .win-rate {
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
   padding: 2px 6px;
   border: 1px solid;
+  border-radius: 0;
 }
 
 .win-rate-positive {
-  color: #6fcf97;
-  border-color: #2d5a3d;
-  background: #0d2018;
+  color: var(--win-text);
+  border-color: var(--win-border);
+  background: var(--win-bg);
 }
 
 .win-rate-negative {
-  color: #eb5757;
-  border-color: #5a2d2d;
-  background: #200d0d;
+  color: var(--loss-text);
+  border-color: var(--loss-border);
+  background: var(--loss-bg);
 }
 
 .win-rate-na {
   color: var(--muted);
-  border-color: #333;
+  border-color: var(--border);
   background: transparent;
 }
 
+/* =====================================================
+   RESULTS — GROUPS LIST
+   ===================================================== */
 .groups-list {
   max-height: 320px;
   overflow-y: auto;
@@ -608,7 +838,7 @@ input[type="range"]:focus-visible {
 
 .group-row {
   background: var(--input);
-  border: 1px solid #333;
+  border: 1px solid var(--border);
   border-radius: 0;
   display: flex;
   flex-wrap: wrap;
@@ -625,7 +855,7 @@ input[type="range"]:focus-visible {
 }
 
 .group-row .group-names {
-  color: var(--success);
+  color: var(--text);
   font-weight: 600;
   font-size: 12px;
 }
@@ -636,6 +866,9 @@ input[type="range"]:focus-visible {
   font-size: 12px;
 }
 
+/* =====================================================
+   DISCLAIMER
+   ===================================================== */
 .site-disclaimer {
   margin-top: 30px;
   padding: 16px 0 5px;
@@ -646,18 +879,161 @@ input[type="range"]:focus-visible {
   line-height: 1.6;
 }
 
-::selection {
-  background: #f5f5f5;
-  color: #0b0b0b;
+/* =====================================================
+   FEEDBACK
+   ===================================================== */
+.feedback-section {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1000;
+  text-align: center;
+  margin: 0;
 }
 
-@media (max-width: 700px) {
+.feedback-button,
+#feedback-button {
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+  color: var(--toggle-text);
+  padding: 10px 18px;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: border-color 0.15s, color 0.15s;
+}
 
+.feedback-button:hover,
+#feedback-button:hover {
+  border-color: var(--toggle-hover-border);
+  color: var(--toggle-hover-text);
+}
+
+.feedback-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--modal-scrim);
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.feedback-modal.open {
+  display: flex;
+}
+
+.feedback-box {
+  width: min(500px, 90%);
+  padding: 25px;
+  border-radius: 0;
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
+}
+
+.feedback-box h2 {
+  margin-top: 0;
+  font-size: 14px;
+}
+
+#feedback-message {
+  width: 100%;
+  min-height: 150px;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 12px;
+  margin: 10px 0;
+  background: var(--input);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text);
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 13px;
+}
+
+#feedback-message:focus-visible {
+  outline: none;
+  border-color: var(--text);
+  box-shadow: 0 0 0 1px var(--text);
+}
+
+#feedback-message::placeholder {
+  color: var(--placeholder);
+}
+
+.feedback-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.feedback-cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 9px 16px;
+  cursor: pointer;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.feedback-cancel:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.feedback-submit {
+  background: var(--btn-primary-bg);
+  border: 1px solid var(--btn-primary-border);
+  color: var(--btn-primary-text);
+  padding: 9px 16px;
+  cursor: pointer;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.feedback-submit:hover:not(:disabled) {
+  background: var(--btn-hover-bg);
+  color: var(--btn-hover-text);
+  border-color: var(--btn-hover-border);
+}
+
+.feedback-submit:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-text);
+  border-color: var(--btn-disabled-border);
+  cursor: not-allowed;
+}
+
+#feedback-error {
+  min-height: 20px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--loss-text);
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+@media (max-width: 700px) {
   .names-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .stat-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .player-sections {
     grid-template-columns: 1fr;
   }
 }
@@ -672,91 +1048,4 @@ input[type="range"]:focus-visible {
   .player-sections {
     grid-template-columns: 1fr;
   }
-}
-
-@media (max-width: 700px) {
-  .player-sections {
-    grid-template-columns: 1fr;
-  }
-}
-
-.feedback-section {
-  text-align: center;
-  margin: 30px 0;
-}
-
-#feedback-button {
-  background: transparent;
-  border: 1px solid #555;
-  color: #aaa;
-  padding: 10px 18px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-#feedback-button:hover {
-  color: white;
-  border-color: #888;
-}
-
-.feedback-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.feedback-modal.open {
-  display: flex;
-}
-
-.feedback-box {
-  width: min(500px, 90%);
-  padding: 25px;
-  border-radius: 10px;
-  background: #1b1b1b;
-  border: 1px solid #333;
-}
-
-.feedback-box h2 {
-  margin-top: 0;
-}
-
-#feedback-message {
-  width: 100%;
-  min-height: 150px;
-  box-sizing: border-box;
-  resize: vertical;
-  padding: 12px;
-  margin: 10px 0;
-}
-
-.feedback-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.feedback-actions button {
-  padding: 9px 16px;
-  cursor: pointer;
-}
-
-#feedback-error {
-  min-height: 20px;
-  margin-bottom: 10px;
-}
-
-.feedback-section {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  z-index: 1000;
-}
-
-.feedback-button {
-  cursor: pointer;
 }

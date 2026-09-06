@@ -7,6 +7,15 @@
     <title>R6SS - Rainbow 6 Squad Stats</title>
 
     <link rel="stylesheet" href="/style.css">
+
+    <!-- Inline theme init: run before paint to prevent flash of wrong theme -->
+    <script>
+        (function () {
+            var stored = localStorage.getItem("r6ss-theme");
+            var theme = stored || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+            document.documentElement.setAttribute("data-theme", theme);
+        })();
+    </script>
 </head>
 
 <body>
@@ -14,10 +23,13 @@
     <div class="container">
 
         <header>
-            <h1>R6SS - Rainbow 6 Squad Stats</h1>
-            <p class="subtitle">
-                ~ calculate how often a player queues with people in your squad ~
-            </p>
+            <div class="header-text">
+                <h1>R6SS - Rainbow 6 Squad Stats</h1>
+                <p class="subtitle">
+                    ~ calculate how often a player queues with people in your squad ~
+                </p>
+            </div>
+            <button id="theme-toggle" type="button" aria-label="Toggle light/dark theme">[ light ]</button>
         </header>
 
         <section class="card">
@@ -1167,6 +1179,31 @@
                     /Android|iPhone|iPad|iPod|Mobile/i.test(ua)
             };
         }
+
+        // =====================================
+        // THEME TOGGLE
+        // =====================================
+
+        const themeToggle = document.getElementById("theme-toggle");
+
+        function getTheme() {
+            return document.documentElement.getAttribute("data-theme") || "dark";
+        }
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute("data-theme", theme);
+            localStorage.setItem("r6ss-theme", theme);
+            themeToggle.textContent = theme === "dark" ? "[ light ]" : "[ dark ]";
+            themeToggle.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        // Sync button label to whatever the inline script already set
+        setTheme(getTheme());
+
+        themeToggle.addEventListener("click", () => {
+            setTheme(getTheme() === "dark" ? "light" : "dark");
+        });
+
 
         // =====================================
         // START APPLICATION
