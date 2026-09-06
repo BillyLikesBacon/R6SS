@@ -27,7 +27,6 @@ const RATE_LIMIT_WAIT = 20000;
 const ERROR_WAIT = 15000;
 const DEFAULT_TARGET_MATCHES = 50;
 const MAX_CONCURRENT_PLAYER_SCRAPES = 3;
-const FETCH_TIMEOUT_MS = 30000; // abort hung requests after 30 s
 
 const UUID_PATTERN =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -174,20 +173,7 @@ function apiHeaders() {
 }
 
 async function fetchJson(url, options = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-  let response;
-  try {
-    response = await fetch(url, { ...options, signal: controller.signal });
-  } catch (err) {
-    clearTimeout(timer);
-    if (err.name === "AbortError") {
-      throw new Error(`Request timed out after ${FETCH_TIMEOUT_MS / 1000}s`);
-    }
-    throw err;
-  }
-  clearTimeout(timer);
+  const response = await fetch(url, options);
 
   const text = await response.text();
 
@@ -425,36 +411,7 @@ function buildPairKey(a, b) {
   return [a, b].sort().join(" <> ");
 }
 
-async function fetchMatchProfiles(matchId) {
-  // Fetches /v2/matches/{uuid} and returns the profiles array (all players in
-  // the lobby with their usernames).  Returns [] on any error.
-  const url = `${API_BASE}/matches/${encodeURIComponent(matchId)}`;
-  let retries = 0;
 
-  while (retries <= MAX_RETRIES) {
-    let result;
-    try {
-      result = await fetchJson(url, { method: "GET", headers: apiHeaders() });
-    } catch {
-      return [];
-    }
-
-    const { response, data } = result;
-
-    if (response.status === 429) {
-      const wait = retryAfterSeconds(response, RATE_LIMIT_WAIT);
-      await sleep(wait);
-      retries++;
-      continue;
-    }
-
-    if (!response.ok) return [];
-
-    return Array.isArray(data?.profiles) ? data.profiles : [];
-  }
-
-  return [];
-}
 
 // Build a matchId → outcome map from the main player's match list.
 // Each match from /profiles/:uuid/matches includes player_summary.outcome.
@@ -480,144 +437,114 @@ async function runScraper(
   targetMatches
 ) {
   try {
-    // ── Step 1: resolve main player UUID ────────────────────────────────────
-    setStatus(jobId, "Resolving main player profile...");
+    // All entered players are equal — no "main" player.
+    // The first entry is the profile URL/name the user typed in the top field;
+    // the rest are the squad members.  All are resolved and scraped the same way.
+    const allPlayerDefs = [
+      { label: playerUrl, input: playerUrl },
+      ...names.map((n) => ({ label: n, input: n })),
+    ];
+
+    const totalToFetch = allPlayerDefs.length * targetMatches;
 
     updateJob(jobId, {
-      player_progress: [
-        { name: playerUrl, current: 0, total: targetMatches },
-      ],
-      progress: { current: 0, total: targetMatches },
+      player_progress: allPlayerDefs.map((def) => ({
+        name: def.label,
+        current: 0,
+        total: targetMatches,
+      })),
+      progress: { current: 0, total: totalToFetch },
     });
 
-    const mainUuid = await resolvePlayerUuid(playerUrl);
-    if (!mainUuid) {
-      throw new Error("Could not resolve the main player's profile.");
-    }
+    setStatus(jobId, "Resolving player profiles...");
 
-    // ── Step 2: load main player's recent ranked matches ─────────────────────
-    const mainMatches = await loadMatches(
-      mainUuid,
-      targetMatches,
-      jobId,
-      "Loading matches",
-      0,
-      targetMatches,
-      (loaded) => {
-        setPlayerProgress(jobId, 0, loaded);
-        setProgress(jobId, loaded, targetMatches);
-      }
-    );
+    // playerData[i] = { name, uuid, matches, matchSet, outcomeMap }
+    const playerData = new Array(allPlayerDefs.length);
+    const playerProgress = new Array(allPlayerDefs.length).fill(0);
 
-    if (!mainMatches.length) {
-      throw new Error("No matches were loaded for the main player.");
-    }
+    const reportProgress = (index, loaded) => {
+      playerProgress[index] = loaded;
+      setPlayerProgress(jobId, index, loaded);
+      const completed = playerProgress.reduce((a, b) => a + b, 0);
+      setProgress(jobId, completed, totalToFetch);
+    };
 
-    // Build outcome map from the match list (player_summary.outcome on each item)
-    const outcomeMap = buildOutcomeMap(mainMatches);
+    let nextIndex = 0;
 
-    // ── Step 3: fetch match details to find squad members in the lobby ───────
-    // For each match we fetch /v2/matches/{uuid} which includes a profiles[]
-    // array with every player's username.  We check case-insensitively whether
-    // any of the entered squad names appear in that list.
+    async function scrapePlayer() {
+      while (nextIndex < allPlayerDefs.length) {
+        const index = nextIndex++;
+        const def = allPlayerDefs[index];
 
-    const lowerNames = names.map((n) => n.toLowerCase());
+        setStatus(jobId, `Resolving profile for ${def.label}...`);
 
-    // Track per squad-member: which match IDs they appeared in
-    // matchPresence[i] = Set of match UUIDs where names[i] was found
-    const matchPresence = names.map(() => new Set());
+        const uuid = await resolvePlayerUuid(def.input);
 
-    setStatus(jobId, `Checking ${mainMatches.length} matches for squad members...`);
-    // Phase 2 progress offset: Phase 1 already counted targetMatches steps
-    const phase2Offset = targetMatches;
-    setProgress(jobId, phase2Offset, targetMatches * 2);
-
-    // Fetch match details with controlled concurrency
-    let detailIdx = 0;
-    let detailsDone = 0;
-    const total = mainMatches.length;
-
-    async function processNextMatch() {
-      while (detailIdx < total) {
-        const match = mainMatches[detailIdx++];
-        if (!match?.id) {
-          detailsDone++;
-          setProgress(jobId, phase2Offset + detailsDone, targetMatches * 2);
+        if (!uuid) {
+          setStatus(jobId, `Could not resolve profile for ${def.label}`);
+          playerData[index] = {
+            name: def.label,
+            uuid: null,
+            matches: [],
+            matchSet: new Set(),
+            outcomeMap: new Map(),
+          };
+          reportProgress(index, targetMatches);
           continue;
         }
 
-        const profiles = await fetchMatchProfiles(match.id);
+        const matches = await loadMatches(
+          uuid,
+          targetMatches,
+          jobId,
+          `Loading matches for ${def.label}`,
+          0,
+          totalToFetch,
+          (loaded) => reportProgress(index, loaded)
+        );
 
-        for (const profile of profiles) {
-          const uname = (profile.username || "").toLowerCase();
-          for (let i = 0; i < lowerNames.length; i++) {
-            if (uname === lowerNames[i]) {
-              matchPresence[i].add(match.id);
-            }
-          }
-        }
+        playerData[index] = {
+          name: def.label,
+          uuid,
+          matches,
+          matchSet: new Set(matches.filter((m) => m?.id).map((m) => m.id)),
+          outcomeMap: buildOutcomeMap(matches),
+        };
 
-        detailsDone++;
-        setProgress(jobId, phase2Offset + detailsDone, targetMatches * 2);
-        setStatus(jobId, `Checking matches... ${detailsDone} / ${total}`);
-
-        await sleep(randomDelay(MIN_DELAY, MAX_DELAY));
+        reportProgress(index, targetMatches);
       }
     }
 
-    await Promise.all(
-      Array.from({ length: MAX_CONCURRENT_PLAYER_SCRAPES }, () => processNextMatch())
-    );
+    const workerCount = Math.min(MAX_CONCURRENT_PLAYER_SCRAPES, allPlayerDefs.length);
+    await Promise.all(Array.from({ length: workerCount }, () => scrapePlayer()));
 
-    // ── Step 4: calculate frequencies ───────────────────────────────────────
     setStatus(jobId, "Calculating frequencies...");
 
-    const mainMatchSet = new Set(mainMatches.map((m) => m.id));
-
-    const playerFrequencies = names.map((name, i) => {
-      const count = matchPresence[i].size;
-      const total = mainMatchSet.size;
-      let wins = 0;
-      let losses = 0;
-      for (const id of matchPresence[i]) {
-        const outcome = outcomeMap.get(id);
-        if (outcome === "win") wins++;
-        else if (outcome === "loss") losses++;
-      }
-      const decided = wins + losses;
-      return {
-        name,
-        count,
-        percentage: total > 0 ? (count / total) * 100 : 0,
-        wins,
-        losses,
-        win_percentage: decided > 0 ? (wins / decided) * 100 : null,
-      };
-    });
-
-    // Pairwise frequencies — matches where both squad members appeared
-    // together in the main player's games.  Win/loss comes from the main
-    // player's own outcome for those shared matches.
+    // ── Pairwise frequencies ─────────────────────────────────────────────────
+    // For every pair (A, B): shared matches = intersection of their match sets.
+    // Win/loss is read from A's outcomeMap for those shared matches — both
+    // players were in the same game so either player's outcome works (they're
+    // on the same team only when queued together, but the win/loss reflects
+    // the game result for the querying player, which is consistent).
     const pairFrequencies = [];
-    for (let i = 0; i < names.length; i++) {
-      for (let j = i + 1; j < names.length; j++) {
-        const setA = matchPresence[i];
-        const setB = matchPresence[j];
+    for (let i = 0; i < playerData.length; i++) {
+      for (let j = i + 1; j < playerData.length; j++) {
+        const a = playerData[i];
+        const b = playerData[j];
         let count = 0;
         let wins = 0;
         let losses = 0;
-        for (const id of setA) {
-          if (setB.has(id)) {
-            count++;
-            const outcome = outcomeMap.get(id);
-            if (outcome === "win") wins++;
-            else if (outcome === "loss") losses++;
-          }
+        for (const id of a.matchSet) {
+          if (!b.matchSet.has(id)) continue;
+          count++;
+          const outcome = a.outcomeMap.get(id) ?? b.outcomeMap.get(id);
+          if (outcome === "win") wins++;
+          else if (outcome === "loss") losses++;
         }
-        const total = Math.max(setA.size, setB.size);
+        const total = Math.max(a.matchSet.size, b.matchSet.size);
         const decided = wins + losses;
         pairFrequencies.push({
-          players: [names[i], names[j]],
+          players: [a.name, b.name],
           count,
           total,
           percentage: total > 0 ? (count / total) * 100 : 0,
@@ -628,34 +555,48 @@ async function runScraper(
       }
     }
 
-    // Include main player in the pair data so the frontend can show
-    // main ↔ each squad member alongside squad ↔ squad pairs
-    const mainPlayerName = playerUrl;
-    for (const freq of playerFrequencies) {
-      pairFrequencies.push({
-        players: [mainPlayerName, freq.name],
-        count: freq.count,
-        total: mainMatchSet.size,
-        percentage: freq.percentage,
-        wins: freq.wins,
-        losses: freq.losses,
-        win_percentage: freq.win_percentage,
-      });
-    }
+    // ── Per-player frequency vs every other player ───────────────────────────
+    // player_frequencies keeps the original shape for frontend compatibility:
+    // each squad member (all players except the first) vs the first player.
+    // Since all players are equal we use the first entered player as the
+    // reference axis for this summary view only — the full picture is in pairs.
+    const refPlayer = playerData[0];
+    const playerFrequencies = playerData.slice(1).map((p) => {
+      let count = 0;
+      let wins = 0;
+      let losses = 0;
+      for (const id of refPlayer.matchSet) {
+        if (!p.matchSet.has(id)) continue;
+        count++;
+        const outcome = refPlayer.outcomeMap.get(id) ?? p.outcomeMap.get(id);
+        if (outcome === "win") wins++;
+        else if (outcome === "loss") losses++;
+      }
+      const total = refPlayer.matchSet.size;
+      const decided = wins + losses;
+      return {
+        name: p.name,
+        count,
+        percentage: total > 0 ? (count / total) * 100 : 0,
+        wins,
+        losses,
+        win_percentage: decided > 0 ? (wins / decided) * 100 : null,
+      };
+    });
 
-    const matchUrls = createMatchUrls(mainMatches, mainUuid);
+    const matchUrls = createMatchUrls(refPlayer.matches, refPlayer.uuid);
 
     const result = {
       match_urls: matchUrls,
-      total_groups: mainMatchSet.size,
-      main_player: mainPlayerName,
+      total_groups: refPlayer.matchSet.size,
+      main_player: refPlayer.name,
       player_frequencies: playerFrequencies,
       pair_frequencies: pairFrequencies,
     };
 
     updateJob(jobId, {
       status: "Complete",
-      progress: { current: targetMatches * 2, total: targetMatches * 2 },
+      progress: { current: totalToFetch, total: totalToFetch },
       done: true,
       error: null,
       result,
@@ -849,19 +790,15 @@ app.post("/api/start", (req, res) => {
   }
 
   const jobId = crypto.randomUUID();
-  // Phase 1: load main player matches (targetMatches)
-  // Phase 2: fetch each match detail (targetMatches)
-  const totalToFetch = targetMatches * 2;
+  const totalToFetch = (1 + names.length) * targetMatches;
 
   JOBS.set(jobId, {
     status: "Starting...",
     player_progress: [
       { name: playerUrl, current: 0, total: targetMatches },
+      ...names.map((name) => ({ name, current: 0, total: targetMatches })),
     ],
-    progress: {
-      current: 0,
-      total: totalToFetch,
-    },
+    progress: { current: 0, total: totalToFetch },
     done: false,
     error: null,
     result: null,
