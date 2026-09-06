@@ -118,9 +118,19 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.45;
-  transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* Theme transition — applied after page load via JS to avoid flash */
+body.theme-ready,
+body.theme-ready *,
+body.theme-ready *::before,
+body.theme-ready *::after {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease !important;
 }
 
 /* =====================================================
@@ -249,6 +259,9 @@ header {
 /* =====================================================
    FORM — TEXT INPUTS
    ===================================================== */
+/* Remove individual input transitions — theme transitions are handled
+   globally by body.theme-ready; keeping per-element transitions would
+   cause staggered repaints during theme switch */
 input[type="text"] {
   width: 100%;
   background: var(--input);
@@ -259,7 +272,6 @@ input[type="text"] {
   font-size: 13px;
   font-family: inherit;
   margin-bottom: 17px;
-  transition: background 0.15s, border-color 0.15s;
 }
 
 input[type="text"]::placeholder {
@@ -319,6 +331,7 @@ input[type="text"]:focus-visible {
   display: block;
 }
 
+/* Remove individual search item transition — handled by theme-ready */
 .search-item {
   padding: 8px 12px;
   cursor: pointer;
@@ -329,7 +342,6 @@ input[type="text"]:focus-visible {
   border-bottom: 1px solid var(--border-placeholder);
   font-size: 12px;
   white-space: nowrap;
-  transition: background 0.1s;
 }
 
 .search-item:last-child {
@@ -568,12 +580,16 @@ input[type="range"]:focus-visible {
   height: 5px;
   overflow: hidden;
   background: var(--surface-track);
+  position: relative;
 }
 
 .player-progress-fill {
-  height: 100%;
+  position: absolute;
+  inset: 0;
   background: var(--text);
-  transition: width 0.25s ease;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 0.25s ease;
 }
 
 /* =====================================================
@@ -750,6 +766,7 @@ input[type="range"]:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 15px;
+  font-weight: 600;
 }
 
 /* =====================================================
@@ -939,12 +956,19 @@ input[type="range"]:focus-visible {
   font-size: 14px;
 }
 
+.feedback-box > p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 4px;
+}
+
 #feedback-message {
   width: 100%;
   min-height: 150px;
   box-sizing: border-box;
   resize: vertical;
   padding: 12px;
+  padding-bottom: 20px; /* clearance for resize handle */
   margin: 10px 0;
   background: var(--input);
   border: 1px solid var(--border);
@@ -952,6 +976,7 @@ input[type="range"]:focus-visible {
   color: var(--text);
   font-family: "IBM Plex Mono", "Courier New", monospace;
   font-size: 13px;
+  color-scheme: var(--color-scheme);
 }
 
 #feedback-message:focus-visible {
@@ -1014,7 +1039,8 @@ input[type="range"]:focus-visible {
   cursor: not-allowed;
 }
 
-#feedback-error {
+#feedback-error,
+.feedback-error {
   min-height: 20px;
   margin-bottom: 10px;
   font-size: 12px;

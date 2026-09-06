@@ -55,6 +55,22 @@ typography:
     fontWeight: 600
     lineHeight: 1.45
     letterSpacing: "0.08em"
+  nano:
+    fontFamily: '"IBM Plex Mono", "Courier New", monospace'
+    fontSize: "11px"
+    fontWeight: 600
+    lineHeight: 1.45
+    letterSpacing: "0.04em"
+  ui-modal:
+    fontFamily: '"IBM Plex Mono", "Courier New", monospace'
+    fontSize: "14px"
+    fontWeight: 600
+    lineHeight: 1.45
+  stat-value:
+    fontFamily: '"IBM Plex Mono", "Courier New", monospace'
+    fontSize: "21px"
+    fontWeight: 600
+    lineHeight: 1.2
 rounded:
   none: "0px"
   modal: "10px"

@@ -47,7 +47,7 @@
             </div>
 
             <label class="field-label">
-                Squad members to cross-check (NOT case sensitive)
+                Squad members to cross-check (case-insensitive)
             </label>
 
             <div class="names-row">
@@ -56,7 +56,7 @@
                     <div class="search-dropdown"></div>
                 </div>
                 <div class="search-container">
-                    <input class="name-input" type="text" autocomplete="off" placeholder="lil_limit">
+                    <input class="name-input" type="text" autocomplete="off" placeholder="lil_Limit">
                     <div class="search-dropdown"></div>
                 </div>
                 <div class="search-container">
@@ -665,7 +665,7 @@
                                     <span>${current} / ${total} matches</span>
                                 </div>
                                 <div class="player-progress-track">
-                                    <div class="player-progress-fill" style="width: ${percentage}%"></div>
+                                    <div class="player-progress-fill" style="transform: scaleX(${percentage / 100})"></div>
                                 </div>
                             </div>
                         `;
@@ -1199,6 +1199,14 @@
 
         // Sync button label to whatever the inline script already set
         setTheme(getTheme());
+
+        // Enable theme transitions only after first paint — prevents
+        // load-time flash when localStorage theme differs from :root default
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                document.body.classList.add("theme-ready");
+            });
+        });
 
         themeToggle.addEventListener("click", () => {
             setTheme(getTheme() === "dark" ? "light" : "dark");
