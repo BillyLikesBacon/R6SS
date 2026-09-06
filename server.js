@@ -411,9 +411,39 @@ function buildPairKey(a, b) {
   return [a, b].sort().join(" <> ");
 }
 
-// Build a matchId → outcome map from any player's already-loaded match list.
-// Each match object from /profiles/:uuid/matches includes a player_summary
-// field with that player's outcome ('win'/'loss').
+async function fetchMatchProfiles(matchId) {
+  // Fetches /v2/matches/{uuid} and returns the profiles array (all players in
+  // the lobby with their usernames).  Returns [] on any error.
+  const url = `${API_BASE}/matches/${encodeURIComponent(matchId)}`;
+  let retries = 0;
+
+  while (retries <= MAX_RETRIES) {
+    let result;
+    try {
+      result = await fetchJson(url, { method: "GET", headers: apiHeaders() });
+    } catch {
+      return [];
+    }
+
+    const { response, data } = result;
+
+    if (response.status === 429) {
+      const wait = retryAfterSeconds(response, RATE_LIMIT_WAIT);
+      await sleep(wait);
+      retries++;
+      continue;
+    }
+
+    if (!response.ok) return [];
+
+    return Array.isArray(data?.profiles) ? data.profiles : [];
+  }
+
+  return [];
+}
+
+// Build a matchId → outcome map from the main player's match list.
+// Each match from /profiles/:uuid/matches includes player_summary.outcome.
 function buildOutcomeMap(matches) {
   const map = new Map();
   for (const match of matches) {
@@ -427,34 +457,7 @@ function buildOutcomeMap(matches) {
   return map;
 }
 
-function calculatePairwiseFrequencies(allPlayers) {
-  const pairs = [];
 
-  for (let i = 0; i < allPlayers.length; i++) {
-    for (let j = i + 1; j < allPlayers.length; j++) {
-      const a = allPlayers[i];
-      const b = allPlayers[j];
-      const setA = a.matchSet;
-      const setB = b.matchSet;
-
-      let sharedCount = 0;
-      for (const id of setA) {
-        if (setB.has(id)) sharedCount++;
-      }
-
-      const total = Math.max(setA.size, setB.size);
-
-      pairs.push({
-        players: [a.name, b.name],
-        count: sharedCount,
-        total,
-        percentage: total > 0 ? (sharedCount / total) * 100 : 0,
-      });
-    }
-  }
-
-  return pairs;
-}
 
 async function runScraper(
   jobId,
@@ -463,189 +466,182 @@ async function runScraper(
   targetMatches
 ) {
   try {
-    // All players: main player + squad members
-    const allPlayerDefs = [
-      { label: "main player", input: playerUrl, isMain: true },
-      ...names.map((n) => ({ label: n, input: n, isMain: false })),
-    ];
-
-    const totalToFetch = allPlayerDefs.length * targetMatches;
+    // ── Step 1: resolve main player UUID ────────────────────────────────────
+    setStatus(jobId, "Resolving main player profile...");
 
     updateJob(jobId, {
-      player_progress: allPlayerDefs.map((def) => ({
-        name: def.isMain ? def.input : def.label,
-        current: 0,
-        total: targetMatches,
-      })),
+      player_progress: [
+        { name: playerUrl, current: 0, total: targetMatches },
+      ],
+      progress: { current: 0, total: targetMatches },
     });
 
-    setStatus(jobId, "Resolving player profiles...");
-
-    const playerData = new Array(allPlayerDefs.length); // { name, uuid, matchSet }
-    const playerProgress = new Array(allPlayerDefs.length).fill(0);
-
-    const reportPlayerProgress = (index, loaded) => {
-      playerProgress[index] = loaded;
-      setPlayerProgress(jobId, index, loaded);
-      const completed = playerProgress.reduce((sum, value) => sum + value, 0);
-      setProgress(jobId, completed, totalToFetch);
-    };
-
-    let nextPlayerIndex = 0;
-
-    async function scrapeNextPlayer() {
-      while (nextPlayerIndex < allPlayerDefs.length) {
-        const index = nextPlayerIndex++;
-        const def = allPlayerDefs[index];
-
-        setStatus(
-          jobId,
-          def.isMain
-            ? "Resolving main player profile..."
-            : `Resolving profile for ${def.label}...`
-        );
-
-        const uuid = await resolvePlayerUuid(def.input);
-
-        if (!uuid) {
-          setStatus(jobId, `Could not resolve profile for ${def.label}`);
-          playerData[index] = {
-            name: def.label,
-            uuid: null,
-            matchSet: new Set(),
-            matches: [],
-          };
-          reportPlayerProgress(index, targetMatches);
-          continue;
-        }
-
-        const matches = await loadMatches(
-          uuid,
-          targetMatches,
-          jobId,
-          def.isMain
-            ? "Loading main player matches"
-            : `Loading matches for ${def.label}`,
-          0,
-          totalToFetch,
-          (loaded) => reportPlayerProgress(index, loaded)
-        );
-
-        playerData[index] = {
-          name: def.isMain ? def.input : def.label,
-          uuid,
-          matchSet: new Set(matches.filter((m) => m && m.id).map((m) => m.id)),
-          matches,
-        };
-
-        reportPlayerProgress(index, targetMatches);
-      }
+    const mainUuid = await resolvePlayerUuid(playerUrl);
+    if (!mainUuid) {
+      throw new Error("Could not resolve the main player's profile.");
     }
 
-    const workerCount = Math.min(
-      MAX_CONCURRENT_PLAYER_SCRAPES,
-      allPlayerDefs.length
+    // ── Step 2: load main player's recent ranked matches ─────────────────────
+    const mainMatches = await loadMatches(
+      mainUuid,
+      targetMatches,
+      jobId,
+      "Loading matches",
+      0,
+      targetMatches,
+      (loaded) => {
+        setPlayerProgress(jobId, 0, loaded);
+        setProgress(jobId, loaded, targetMatches);
+      }
     );
 
-    await Promise.all(
-      Array.from({ length: workerCount }, () => scrapeNextPlayer())
-    );
-
-    const mainPlayer = playerData[0];
-
-    if (!mainPlayer || mainPlayer.matchSet.size === 0) {
+    if (!mainMatches.length) {
       throw new Error("No matches were loaded for the main player.");
     }
 
-    setStatus(jobId, "Calculating pairwise frequencies...");
+    // Build outcome map from the match list (player_summary.outcome on each item)
+    const outcomeMap = buildOutcomeMap(mainMatches);
 
-    const pairFrequencies = calculatePairwiseFrequencies(playerData);
+    // ── Step 3: fetch match details to find squad members in the lobby ───────
+    // For each match we fetch /v2/matches/{uuid} which includes a profiles[]
+    // array with every player's username.  We check case-insensitively whether
+    // any of the entered squad names appear in that list.
 
-    // Individual frequency vs main player (for backwards compat with frontend)
-    const mainMatchSet = mainPlayer.matchSet;
-    const playerFrequencies = playerData.slice(1).map((p) => {
-      let count = 0;
-      for (const id of mainMatchSet) {
-        if (p.matchSet.has(id)) count++;
+    const lowerNames = names.map((n) => n.toLowerCase());
+
+    // Track per squad-member: which match IDs they appeared in
+    // matchPresence[i] = Set of match UUIDs where names[i] was found
+    const matchPresence = names.map(() => new Set());
+
+    setStatus(jobId, `Checking ${mainMatches.length} matches for squad members...`);
+    // Phase 2 progress offset: Phase 1 already counted targetMatches steps
+    const phase2Offset = targetMatches;
+    setProgress(jobId, phase2Offset, targetMatches * 2);
+
+    // Fetch match details with controlled concurrency
+    let detailIdx = 0;
+    let detailsDone = 0;
+    const total = mainMatches.length;
+
+    async function processNextMatch() {
+      while (detailIdx < total) {
+        const match = mainMatches[detailIdx++];
+        if (!match?.id) {
+          detailsDone++;
+          setProgress(jobId, phase2Offset + detailsDone, targetMatches * 2);
+          continue;
+        }
+
+        const profiles = await fetchMatchProfiles(match.id);
+
+        for (const profile of profiles) {
+          const uname = (profile.username || "").toLowerCase();
+          for (let i = 0; i < lowerNames.length; i++) {
+            if (uname === lowerNames[i]) {
+              matchPresence[i].add(match.id);
+            }
+          }
+        }
+
+        detailsDone++;
+        setProgress(jobId, phase2Offset + detailsDone, targetMatches * 2);
+        setStatus(jobId, `Checking matches... ${detailsDone} / ${total}`);
+
+        await sleep(randomDelay(MIN_DELAY, MAX_DELAY));
       }
+    }
+
+    await Promise.all(
+      Array.from({ length: MAX_CONCURRENT_PLAYER_SCRAPES }, () => processNextMatch())
+    );
+
+    // ── Step 4: calculate frequencies ───────────────────────────────────────
+    setStatus(jobId, "Calculating frequencies...");
+
+    const mainMatchSet = new Set(mainMatches.map((m) => m.id));
+
+    const playerFrequencies = names.map((name, i) => {
+      const count = matchPresence[i].size;
       const total = mainMatchSet.size;
+      let wins = 0;
+      let losses = 0;
+      for (const id of matchPresence[i]) {
+        const outcome = outcomeMap.get(id);
+        if (outcome === "win") wins++;
+        else if (outcome === "loss") losses++;
+      }
+      const decided = wins + losses;
       return {
-        name: p.name,
+        name,
         count,
         percentage: total > 0 ? (count / total) * 100 : 0,
+        wins,
+        losses,
+        win_percentage: decided > 0 ? (wins / decided) * 100 : null,
       };
     });
 
-    // Build an outcome map for every player from their own match list.
-    // Each player's matches already include player_summary.outcome for that player.
-    for (const p of playerData) {
-      p.outcomeMap = buildOutcomeMap(p.matches || []);
+    // Pairwise frequencies — matches where both squad members appeared
+    // together in the main player's games.  Win/loss comes from the main
+    // player's own outcome for those shared matches.
+    const pairFrequencies = [];
+    for (let i = 0; i < names.length; i++) {
+      for (let j = i + 1; j < names.length; j++) {
+        const setA = matchPresence[i];
+        const setB = matchPresence[j];
+        let count = 0;
+        let wins = 0;
+        let losses = 0;
+        for (const id of setA) {
+          if (setB.has(id)) {
+            count++;
+            const outcome = outcomeMap.get(id);
+            if (outcome === "win") wins++;
+            else if (outcome === "loss") losses++;
+          }
+        }
+        const total = Math.max(setA.size, setB.size);
+        const decided = wins + losses;
+        pairFrequencies.push({
+          players: [names[i], names[j]],
+          count,
+          total,
+          percentage: total > 0 ? (count / total) * 100 : 0,
+          wins,
+          losses,
+          win_percentage: decided > 0 ? (wins / decided) * 100 : null,
+        });
+      }
     }
 
-    // Attach wins/losses/win_percentage to each player_frequency entry.
-    // Use player A's outcome map for shared matches with player B — since both
-    // players were in the same match, either outcome map works (they're on the
-    // same team and share the same result).
-    for (const entry of playerFrequencies) {
-      const sp = playerData.find((p) => p.name === entry.name);
-      const ref = playerData[0]; // any player with outcome data works; use first
-      let wins = 0;
-      let losses = 0;
-      for (const id of ref.matchSet) {
-        if (!sp || !sp.matchSet.has(id)) continue;
-        const outcome = ref.outcomeMap.get(id);
-        if (outcome === "win") wins++;
-        else if (outcome === "loss") losses++;
-      }
-      entry.wins = wins;
-      entry.losses = losses;
-      const decided = wins + losses;
-      entry.win_percentage = decided > 0 ? (wins / decided) * 100 : null;
+    // Include main player in the pair data so the frontend can show
+    // main ↔ each squad member alongside squad ↔ squad pairs
+    const mainPlayerName = playerUrl;
+    for (const freq of playerFrequencies) {
+      pairFrequencies.push({
+        players: [mainPlayerName, freq.name],
+        count: freq.count,
+        total: mainMatchSet.size,
+        percentage: freq.percentage,
+        wins: freq.wins,
+        losses: freq.losses,
+        win_percentage: freq.win_percentage,
+      });
     }
 
-    // Attach wins/losses/win_percentage to every pair — no special treatment
-    // for any player.  For a given pair (A, B), use A's outcome map to read
-    // results for the matches they shared.
-    for (const pair of pairFrequencies) {
-      const playerA = playerData.find((p) => p.name === pair.players[0]);
-      const playerB = playerData.find((p) => p.name === pair.players[1]);
-      if (!playerA || !playerB) {
-        pair.wins = null;
-        pair.losses = null;
-        pair.win_percentage = null;
-        continue;
-      }
-      let wins = 0;
-      let losses = 0;
-      for (const id of playerA.matchSet) {
-        if (!playerB.matchSet.has(id)) continue;
-        // Use whichever player has outcome data for this match
-        const outcome = playerA.outcomeMap.get(id) ?? playerB.outcomeMap.get(id);
-        if (outcome === "win") wins++;
-        else if (outcome === "loss") losses++;
-      }
-      pair.wins = wins;
-      pair.losses = losses;
-      const decided = wins + losses;
-      pair.win_percentage = decided > 0 ? (wins / decided) * 100 : null;
-    }
-
-    const matchUrls = createMatchUrls(mainPlayer.matches, mainPlayer.uuid);
+    const matchUrls = createMatchUrls(mainMatches, mainUuid);
 
     const result = {
       match_urls: matchUrls,
-      total_groups: mainPlayer.matchSet.size,
-      main_player: mainPlayer.name,
+      total_groups: mainMatchSet.size,
+      main_player: mainPlayerName,
       player_frequencies: playerFrequencies,
       pair_frequencies: pairFrequencies,
     };
 
     updateJob(jobId, {
       status: "Complete",
-      progress: {
-        current: totalToFetch,
-        total: totalToFetch,
-      },
+      progress: { current: total, total },
       done: true,
       error: null,
       result,
@@ -839,17 +835,14 @@ app.post("/api/start", (req, res) => {
   }
 
   const jobId = crypto.randomUUID();
-  const totalToFetch = (1 + names.length) * targetMatches;
+  // Phase 1: load main player matches (targetMatches)
+  // Phase 2: fetch each match detail (targetMatches)
+  const totalToFetch = targetMatches * 2;
 
   JOBS.set(jobId, {
     status: "Starting...",
     player_progress: [
       { name: playerUrl, current: 0, total: targetMatches },
-      ...names.map((name) => ({
-        name,
-        current: 0,
-        total: targetMatches,
-      })),
     ],
     progress: {
       current: 0,
