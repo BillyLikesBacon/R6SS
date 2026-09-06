@@ -27,6 +27,7 @@ const RATE_LIMIT_WAIT = 20000;
 const ERROR_WAIT = 15000;
 const DEFAULT_TARGET_MATCHES = 50;
 const MAX_CONCURRENT_PLAYER_SCRAPES = 3;
+const FETCH_TIMEOUT_MS = 30000; // abort hung requests after 30 s
 
 const UUID_PATTERN =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -173,7 +174,20 @@ function apiHeaders() {
 }
 
 async function fetchJson(url, options = {}) {
-  const response = await fetch(url, options);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  let response;
+  try {
+    response = await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.name === "AbortError") {
+      throw new Error(`Request timed out after ${FETCH_TIMEOUT_MS / 1000}s`);
+    }
+    throw err;
+  }
+  clearTimeout(timer);
 
   const text = await response.text();
 
@@ -641,7 +655,7 @@ async function runScraper(
 
     updateJob(jobId, {
       status: "Complete",
-      progress: { current: total, total },
+      progress: { current: targetMatches * 2, total: targetMatches * 2 },
       done: true,
       error: null,
       result,
