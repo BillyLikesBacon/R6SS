@@ -11,6 +11,7 @@
 
 const express = require("express");
 const crypto = require("crypto");
+const QRCode = require("qrcode");
 
 const app = express();
 
@@ -732,6 +733,28 @@ app.get("/api/search-players", async (req, res) => {
     return res.status(500).json({
       error: "Failed to search players."
     });
+  }
+});
+
+app.get("/api/qr", async (req, res) => {
+  const value = String(req.query.data || "").trim();
+
+  if (!value || value.length > 2000) {
+    return res.status(400).json({ error: "Invalid QR code data." });
+  }
+
+  try {
+    const image = await QRCode.toBuffer(value, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 280,
+      color: { dark: "#0b0b0b", light: "#ffffff" },
+    });
+
+    return res.type("png").send(image);
+  } catch (error) {
+    console.error("QR code error:", error);
+    return res.status(500).json({ error: "Failed to generate QR code." });
   }
 });
 

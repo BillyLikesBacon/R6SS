@@ -768,6 +768,13 @@
             </div>
 
 
+            <div class="results-actions">
+                <button id="export-button" class="export-button" type="button">
+                    Export PNG
+                </button>
+            </div>
+
+
             <div id="player-sections" class="player-sections"></div>
 
         </section>
@@ -777,8 +784,168 @@
 
             results.innerHTML = stats;
 
+            document.getElementById("export-button").addEventListener("click", () => {
+                exportResultsAsPng(data);
+            });
+
             renderPlayerSections(data);
 
+        }
+
+
+        async function exportResultsAsPng(data) {
+            const exportButton = document.getElementById("export-button");
+            if (!exportButton) return;
+
+            exportButton.disabled = true;
+            exportButton.textContent = "Preparing PNG...";
+            let qrImageObjectUrl = null;
+
+            try {
+                const qrResponse = await fetch(
+                    `/api/qr?data=${encodeURIComponent("https://r6ss.onrender.com")}`
+                );
+                if (!qrResponse.ok) throw new Error("Could not create the QR code.");
+
+                qrImageObjectUrl = URL.createObjectURL(await qrResponse.blob());
+                const qrImage = await loadExportImage(qrImageObjectUrl);
+                const players = getExportPlayers(data);
+                const canvas = document.createElement("canvas");
+                const canvasContext = canvas.getContext("2d");
+                const canvasWidth = 1600;
+                const pagePadding = 64;
+                const sectionWidth = (canvasWidth - pagePadding * 2 - 24) / 2;
+                const sectionHeight = 136 + Math.max(1, players.length - 1) * 54;
+                const canvasHeight = 340 + Math.ceil(players.length / 2) * (sectionHeight + 24) + 64;
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
+
+                canvasContext.fillStyle = "#0b0b0b";
+                canvasContext.fillRect(0, 0, canvasWidth, canvasHeight);
+                canvasContext.strokeStyle = "#333333";
+                canvasContext.lineWidth = 2;
+                canvasContext.strokeRect(1, 1, canvasWidth - 2, canvasHeight - 2);
+
+                canvasContext.fillStyle = "#f5f5f5";
+                canvasContext.font = "700 34px monospace";
+                canvasContext.fillText("R6SS - Rainbow 6 Squad Stats", pagePadding, 72);
+                canvasContext.fillStyle = "#888888";
+                canvasContext.font = "500 18px monospace";
+                canvasContext.fillText("Squad frequency report", pagePadding, 106);
+                canvasContext.drawImage(qrImage, canvasWidth - pagePadding - 150, 32, 150, 150);
+                canvasContext.textAlign = "right";
+                canvasContext.fillStyle = "#f5f5f5";
+                canvasContext.font = "700 22px monospace";
+                canvasContext.fillText("R6SS", canvasWidth - pagePadding, 210);
+                canvasContext.fillStyle = "#888888";
+                canvasContext.font = "500 15px monospace";
+                canvasContext.fillText("r6ss.onrender.com", canvasWidth - pagePadding, 234);
+                canvasContext.textAlign = "left";
+
+                const summaryTop = 166;
+                const summaryWidth = (canvasWidth - pagePadding * 2 - 32) / 3;
+                [["MAIN PLAYER MATCHES", data.total_groups || 0],
+                    ["SQUAD MEMBERS", data.player_frequencies ? data.player_frequencies.length : 0],
+                    ["PAIRS COMPARED", data.pair_frequencies ? data.pair_frequencies.length : 0]]
+                    .forEach((summary, index) => {
+                        const summaryLeft = pagePadding + index * (summaryWidth + 16);
+                        drawExportPanel(canvasContext, summaryLeft, summaryTop, summaryWidth, 104, "#0b0b0b");
+                        canvasContext.fillStyle = "#888888";
+                        canvasContext.font = "600 15px monospace";
+                        canvasContext.fillText(summary[0], summaryLeft + 20, summaryTop + 32);
+                        canvasContext.fillStyle = "#f5f5f5";
+                        canvasContext.font = "700 34px monospace";
+                        canvasContext.fillText(String(summary[1]), summaryLeft + 20, summaryTop + 78);
+                    });
+
+                canvasContext.fillStyle = "#f5f5f5";
+                canvasContext.font = "700 22px monospace";
+                canvasContext.fillText("PLAYER FREQUENCY", pagePadding, 310);
+                players.forEach((player, index) => {
+                    const sectionLeft = pagePadding + (index % 2) * (sectionWidth + 24);
+                    const sectionTop = 338 + Math.floor(index / 2) * (sectionHeight + 24);
+                    drawExportPlayerSection(canvasContext, sectionLeft, sectionTop, sectionWidth, sectionHeight, player);
+                });
+
+                const downloadLink = document.createElement("a");
+                downloadLink.download = "r6ss-squad-report.png";
+                downloadLink.href = canvas.toDataURL("image/png");
+                downloadLink.click();
+            } catch (error) {
+                showError(error.message || "Failed to export results.");
+            } finally {
+                if (qrImageObjectUrl) URL.revokeObjectURL(qrImageObjectUrl);
+                exportButton.disabled = false;
+                exportButton.textContent = "Export PNG";
+            }
+        }
+
+        function loadExportImage(imageUrl) {
+            return new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = () => reject(new Error("Could not load the QR code."));
+                image.src = imageUrl;
+            });
+        }
+
+        function getExportPlayers(data) {
+            const pairs = Array.isArray(data.pair_frequencies) ? data.pair_frequencies : [];
+            return [...new Set(pairs.flatMap(pair => pair.players))].map(player => ({
+                name: player,
+                connections: pairs.filter(pair => pair.players.includes(player))
+                    .sort((firstPair, secondPair) => secondPair.count - firstPair.count),
+            }));
+        }
+
+        function drawExportPanel(canvasContext, left, top, width, height, fill) {
+            canvasContext.fillStyle = fill;
+            canvasContext.fillRect(left, top, width, height);
+            canvasContext.strokeStyle = "#333333";
+            canvasContext.lineWidth = 2;
+            canvasContext.strokeRect(left, top, width, height);
+        }
+
+        function drawExportPlayerSection(canvasContext, left, top, width, height, player) {
+            drawExportPanel(canvasContext, left, top, width, height, "#111111");
+            canvasContext.fillStyle = "#151515";
+            canvasContext.fillRect(left + 2, top + 2, width - 4, 70);
+            canvasContext.fillStyle = "#888888";
+            canvasContext.font = "600 14px monospace";
+            canvasContext.fillText("PLAYER", left + 18, top + 27);
+            canvasContext.fillStyle = "#f5f5f5";
+            canvasContext.font = "700 21px monospace";
+            canvasContext.fillText(truncateExportText(player.name, 28), left + 18, top + 55);
+
+            player.connections.forEach((pair, index) => {
+                const otherPlayer = pair.players.find(name => name !== player.name);
+                const rowTop = top + 92 + index * 54;
+                const percentage = Number(pair.percentage || 0).toFixed(1);
+                const winRate = pair.win_percentage == null ? "N/A" : `${Number(pair.win_percentage).toFixed(1)}% WR`;
+                canvasContext.strokeStyle = "#252525";
+                canvasContext.beginPath();
+                canvasContext.moveTo(left + 18, rowTop - 15);
+                canvasContext.lineTo(left + width - 18, rowTop - 15);
+                canvasContext.stroke();
+                canvasContext.fillStyle = "#f5f5f5";
+                canvasContext.font = "600 16px monospace";
+                canvasContext.fillText(truncateExportText(otherPlayer, 22), left + 18, rowTop + 8);
+                canvasContext.fillStyle = "#888888";
+                canvasContext.font = "500 13px monospace";
+                canvasContext.fillText(`${pair.count} / ${pair.total} matches`, left + 18, rowTop + 31);
+                canvasContext.textAlign = "right";
+                canvasContext.fillStyle = "#f5f5f5";
+                canvasContext.font = "700 17px monospace";
+                canvasContext.fillText(`${percentage}%`, left + width - 126, rowTop + 8);
+                canvasContext.fillStyle = pair.win_percentage >= 50 ? "#8fdbad" : "#e89494";
+                canvasContext.fillText(winRate, left + width - 18, rowTop + 31);
+                canvasContext.textAlign = "left";
+            });
+        }
+
+        function truncateExportText(value, maxLength) {
+            const text = String(value || "");
+            return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
         }
 
 

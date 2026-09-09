@@ -9,6 +9,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
     "express": "4.21.2",
-    "ipaddr.js": "^2.5.0"
+    "ipaddr.js": "^2.5.0",
+    "qrcode": "^1.5.4"
   }
 }
