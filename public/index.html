@@ -816,7 +816,7 @@
                 const pagePadding = 64;
                 const sectionWidth = (canvasWidth - pagePadding * 2 - 24) / 2;
                 const sectionHeight = 136 + Math.max(1, players.length - 1) * 54;
-                const canvasHeight = 340 + Math.ceil(players.length / 2) * (sectionHeight + 24) + 64;
+                const canvasHeight = 504 + Math.ceil(players.length / 2) * (sectionHeight + 24) + 64;
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
 
@@ -843,13 +843,13 @@
                 canvasContext.textAlign = "right";
                 canvasContext.fillStyle = "#f5f5f5";
                 canvasContext.font = "700 22px monospace";
-                canvasContext.fillText("R6SS", canvasWidth - pagePadding, 210);
+                canvasContext.fillText("R6SS", canvasWidth - pagePadding, 272);
                 canvasContext.fillStyle = "#888888";
                 canvasContext.font = "500 15px monospace";
-                canvasContext.fillText("r6ss.onrender.com", canvasWidth - pagePadding, 234);
+                canvasContext.fillText("r6ss.onrender.com", canvasWidth - pagePadding, 296);
                 canvasContext.textAlign = "left";
 
-                const summaryTop = 166;
+                const summaryTop = 330;
                 const summaryWidth = (canvasWidth - pagePadding * 2 - 32) / 3;
                 [["MAIN PLAYER MATCHES", data.total_groups || 0],
                     ["SQUAD MEMBERS", data.player_frequencies ? data.player_frequencies.length : 0],
@@ -867,10 +867,10 @@
 
                 canvasContext.fillStyle = "#f5f5f5";
                 canvasContext.font = "700 22px monospace";
-                canvasContext.fillText("PLAYER FREQUENCY", pagePadding, 310);
+                canvasContext.fillText("PLAYER FREQUENCY", pagePadding, 474);
                 players.forEach((player, index) => {
                     const sectionLeft = pagePadding + (index % 2) * (sectionWidth + 24);
-                    const sectionTop = 338 + Math.floor(index / 2) * (sectionHeight + 24);
+                    const sectionTop = 502 + Math.floor(index / 2) * (sectionHeight + 24);
                     drawExportPlayerSection(canvasContext, sectionLeft, sectionTop, sectionWidth, sectionHeight, player);
                 });
 
