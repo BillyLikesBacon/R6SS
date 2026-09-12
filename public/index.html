@@ -934,49 +934,54 @@
                 canvasContext.moveTo(left + 18, rowTop - 15);
                 canvasContext.lineTo(left + width - 18, rowTop - 15);
                 canvasContext.stroke();
+                // Line 1: Player name (left) and Frequency % (right)
                 canvasContext.fillStyle = "#f5f5f5";
                 canvasContext.font = "600 16px monospace";
-                canvasContext.fillText(truncateExportText(otherPlayer, 22), left + 18, rowTop + 8);
+                canvasContext.fillText(truncateExportText(otherPlayer, 24), left + 18, rowTop + 8);
+                canvasContext.textAlign = "right";
+                canvasContext.font = "700 17px monospace";
+                canvasContext.fillText(`${percentage}%`, left + width - 18, rowTop + 8);
+                canvasContext.textAlign = "left";
+
+                // Line 2: Match count (left) and Win rate badge (right)
                 canvasContext.fillStyle = "#888888";
                 canvasContext.font = "500 13px monospace";
                 canvasContext.fillText(`${pair.count} / ${pair.total} matches`, left + 18, rowTop + 31);
-                canvasContext.textAlign = "right";
-                canvasContext.fillStyle = "#f5f5f5";
-                canvasContext.font = "700 17px monospace";
-                canvasContext.fillText(`${percentage}%`, left + width - 126, rowTop + 8);
-                const winColumnWidth = 136;
-                const winColumnLeft = left + width - winColumnWidth - 18;
                 drawExportWinBadge(
                     canvasContext,
-                    winColumnLeft,
-                    rowTop + 8,
+                    left + width - 18,
+                    rowTop + 15,
                     winRate,
-                    pair.win_percentage == null ? "na" : pair.win_percentage >= 50 ? "positive" : "negative",
-                    winColumnWidth
+                    pair.win_percentage == null ? "na" : pair.win_percentage >= 50 ? "positive" : "negative"
                 );
-                canvasContext.textAlign = "left";
             });
         }
 
-        function drawExportWinBadge(canvasContext, left, top, text, type, columnWidth) {
+        function drawExportWinBadge(canvasContext, right, top, text, type) {
             const colors = type === "positive"
                 ? { text: "#6fcf97", border: "#2d5a3d", background: "#0d2018" }
                 : type === "negative"
                     ? { text: "#eb5757", border: "#5a2d2d", background: "#200d0d" }
                     : { text: "#888888", border: "#333333", background: "#111111" };
 
-            canvasContext.font = "600 13px monospace";
-            const badgeWidth = Math.max(58, canvasContext.measureText(text).width + 18);
-            const badgeLeft = left + (columnWidth - badgeWidth) / 2;
+            canvasContext.font = "600 12px monospace";
+            const textWidth = canvasContext.measureText(text).width;
+            const badgeWidth = Math.max(48, Math.ceil(textWidth) + 16);
+            const badgeHeight = 20;
+            const badgeLeft = right - badgeWidth;
+
             canvasContext.fillStyle = colors.background;
-            canvasContext.fillRect(badgeLeft, top, badgeWidth, 24);
+            canvasContext.fillRect(badgeLeft, top, badgeWidth, badgeHeight);
             canvasContext.strokeStyle = colors.border;
             canvasContext.lineWidth = 1;
-            canvasContext.strokeRect(badgeLeft, top, badgeWidth, 24);
+            canvasContext.strokeRect(badgeLeft, top, badgeWidth, badgeHeight);
+
             canvasContext.fillStyle = colors.text;
             canvasContext.textAlign = "center";
-            canvasContext.fillText(text, badgeLeft + badgeWidth / 2, top + 17);
+            canvasContext.textBaseline = "middle";
+            canvasContext.fillText(text, badgeLeft + badgeWidth / 2, top + badgeHeight / 2);
             canvasContext.textAlign = "left";
+            canvasContext.textBaseline = "alphabetic";
         }
 
         function truncateExportText(value, maxLength) {
