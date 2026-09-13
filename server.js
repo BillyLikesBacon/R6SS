@@ -45,7 +45,61 @@ const INVALID_NAMES = new Set([
   "players",
 ]);
 
+const MAX_NAME_LENGTH = 80;
+const MAX_STALE_JOB_AGE = 60 * 60 * 1000;
+const MAX_COMPLETED_JOB_AGE = 30 * 60 * 1000;
+
 const JOBS = new Map();
+
+function normalizeName(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizePlayerNames(rawNames) {
+  const seen = new Set();
+  const names = [];
+
+  for (const name of Array.isArray(rawNames) ? rawNames : []) {
+    const candidate = normalizeName(name);
+
+    if (!candidate) {
+      continue;
+    }
+
+    if (candidate.length > MAX_NAME_LENGTH) {
+      continue;
+    }
+
+    const key = candidate.toLowerCase();
+
+    if (INVALID_NAMES.has(key) || seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    names.push(candidate);
+  }
+
+  return names.slice(0, 5);
+}
+
+function pruneJobs() {
+  const now = Date.now();
+
+  for (const [jobId, job] of JOBS) {
+    const createdAt = Number(job.createdAt) || now;
+    const isExpired = createdAt < now - MAX_STALE_JOB_AGE;
+    const isCompletedStale = Boolean(job.done) && createdAt < now - MAX_COMPLETED_JOB_AGE;
+
+    if (isExpired || isCompletedStale) {
+      JOBS.delete(jobId);
+    }
+  }
+}
 
 const { createClient } = require("@supabase/supabase-js");
 
@@ -772,16 +826,9 @@ app.post("/api/start", (req, res) => {
   const data = req.body || {};
 
   const playerUrl =
-    String(data.player_url || "").trim();
+    normalizeName(data.player_url);
 
-  const names = Array.isArray(data.names)
-    ? data.names
-      .map((name) =>
-        String(name || "").trim()
-      )
-      .filter(Boolean)
-      .slice(0, 5)
-    : [];
+  const names = normalizePlayerNames(data.names);
 
   let targetMatches =
     Number.parseInt(
@@ -805,10 +852,16 @@ app.post("/api/start", (req, res) => {
     });
   }
 
+  if (INVALID_NAMES.has(playerUrl.toLowerCase())) {
+    return res.status(400).json({
+      error: "Player URL is invalid.",
+    });
+  }
+
   if (!names.length) {
     return res.status(400).json({
       error:
-        "Enter at least one player to check.",
+        "Enter at least one valid player to check.",
     });
   }
 
@@ -816,6 +869,7 @@ app.post("/api/start", (req, res) => {
   const totalToFetch = (1 + names.length) * targetMatches;
 
   JOBS.set(jobId, {
+    createdAt: Date.now(),
     status: "Starting...",
     player_progress: [
       { name: playerUrl, current: 0, total: targetMatches },
@@ -889,18 +943,18 @@ app.get(
   }
 );
 
+app.get("/api/health", (_req, res) => {
+  res.json({
+    ok: true,
+    uptime: process.uptime(),
+    jobs: JOBS.size,
+    timestamp: Date.now(),
+  });
+});
+
 // Remove old jobs periodically.
 setInterval(() => {
-  const cutoff = Date.now() - 60 * 60 * 1000;
-
-  for (const [jobId, job] of JOBS) {
-    if (
-      job.createdAt &&
-      job.createdAt < cutoff
-    ) {
-      JOBS.delete(jobId);
-    }
-  }
+  pruneJobs();
 }, 10 * 60 * 1000);
 
 app.listen(PORT, "0.0.0.0", () => {
