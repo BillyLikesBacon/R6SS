@@ -748,7 +748,7 @@ app.get("/api/qr", async (req, res) => {
       errorCorrectionLevel: "M",
       margin: 1,
       width: 280,
-      color: { dark: "#000000", light: "#ffffff" },
+      color: { dark: "#0b0b0b", light: "#ffffff" },
     });
 
     return res.type("png").send(image);
